@@ -1,9 +1,9 @@
-import ApiError from "../utils/ApiError.js";
+import { ApiError } from "../utils/ApiError.js";
 
-const errorHandler = (err, req, res, next) => {
+const errorMiddleware = (err, req, res, next) => {
   let error = err;
 
-  // If not our custom error, wrap it
+  // If it's not already an ApiError, normalize it
   if (!(error instanceof ApiError)) {
     const statusCode = error.statusCode || 500;
     const message = error.message || "Internal Server Error";
@@ -11,14 +11,18 @@ const errorHandler = (err, req, res, next) => {
   }
 
   const response = {
+    success: false,
     statusCode: error.statusCode,
     message: error.message,
-    success: false,
     errors: error.errors,
+    // Only show stack trace in development
     ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
   };
+
+  // Log to console (later we'll integrate Winston/Pino)
+  console.error(`❌ [${error.statusCode}] ${error.message}`);
 
   return res.status(error.statusCode).json(response);
 };
 
-export default errorHandler;
+export { errorMiddleware };

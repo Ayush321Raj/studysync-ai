@@ -1,3 +1,7 @@
+/**
+ * Standardized API Error class
+ * Used across the app to throw consistent errors
+ */
 class ApiError extends Error {
   constructor(
     statusCode,
@@ -20,4 +24,4 @@ class ApiError extends Error {
   }
 }
 
-export default ApiError;
+export { ApiError };

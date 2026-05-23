@@ -1,36 +1,39 @@
 import dotenv from "dotenv";
-import app from "./app.js";
+import { app } from "./app.js";
 import connectDB from "./config/db.js";
 
-// Load env vars FIRST
+// Load env vars FIRST (before anything else)
 dotenv.config({ path: "./.env" });
 
 const PORT = process.env.PORT || 8000;
 
-// ─── Boot Sequence ─────────────────────────────────────
-const startServer = async () => {
-  try {
-    await connectDB();
-
+// Start the server only after DB connects
+connectDB()
+  .then(() => {
     app.on("error", (error) => {
-      console.error("❌ Express Error:", error);
+      console.error("❌ Express error:", error);
       throw error;
     });
 
     app.listen(PORT, () => {
       console.log(`⚡ Server running on http://localhost:${PORT}`);
-      console.log(`📡 Health check: http://localhost:${PORT}/api/v1/health`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     });
-  } catch (error) {
-    console.error("❌ Server startup failed:", error);
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection failed:", err);
     process.exit(1);
-  }
-};
+  });
 
-startServer();
-
-// ─── Graceful Shutdown ─────────────────────────────────
+/* ---------------------------------------
+   GRACEFUL SHUTDOWN
+--------------------------------------- */
 process.on("unhandledRejection", (err) => {
-  console.error("❌ Unhandled Rejection:", err);
+  console.error("🔥 UNHANDLED REJECTION:", err);
+  process.exit(1);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("🔥 UNCAUGHT EXCEPTION:", err);
   process.exit(1);
 });

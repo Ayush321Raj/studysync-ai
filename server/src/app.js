@@ -6,54 +6,67 @@ import morgan from "morgan";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 
-import errorHandler from "./middlewares/error.middleware.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
-// ─── Security Middlewares ──────────────────────────────
+/* ---------------------------------------
+   GLOBAL MIDDLEWARES
+--------------------------------------- */
+
+// Security headers
 app.use(helmet());
+
+// CORS — only allow our frontend origin
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true,
+    origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:5173",
+    credentials: true, // Allow cookies (needed for refresh tokens)
   })
 );
 
-// ─── Rate Limiting ─────────────────────────────────────
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window per IP
-  message: "Too many requests, please try again later.",
-});
-app.use("/api", limiter);
-
-// ─── Body Parsers ──────────────────────────────────────
+// Body parsers
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 
-// ─── Performance ───────────────────────────────────────
+// Compression (gzip responses → faster)
 app.use(compression());
 
-// ─── Logging ───────────────────────────────────────────
+// Logging (only in dev)
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// ─── Routes ────────────────────────────────────────────
-app.get("/api/v1/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "🚀 StudySync AI Server is healthy",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+// Rate limiting (protect against brute force / DDoS)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per IP per window
+  message: "Too many requests from this IP, please try again later.",
+});
+app.use("/api", limiter);
+
+/* ---------------------------------------
+   ROUTES
+--------------------------------------- */
+
+import healthRouter from "./routes/health.routes.js";
+app.use("/api/v1/health", healthRouter);
+
+/* ---------------------------------------
+   404 + ERROR HANDLER
+--------------------------------------- */
+
+// 404 handler (must come after all routes)
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    statusCode: 404,
+    message: `Route ${req.originalUrl} not found`,
   });
 });
 
-// TODO: Mount feature routes here (auth, users, rooms, etc.)
-// app.use("/api/v1/auth", authRouter);
+// Global error handler (must be LAST)
+app.use(errorMiddleware);
 
-// ─── Global Error Handler (MUST be last) ───────────────
-app.use(errorHandler);
-
-export default app;
+export { app };
