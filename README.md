@@ -43,7 +43,7 @@ studysync-ai/
 
 \`\`\`bash
 # Clone
-git clone https://github.com/your-username/studysync-ai.git
+git clone https://github.com/Ayush321Raj/studysync-ai.git
 cd studysync-ai
 
 # Backend
