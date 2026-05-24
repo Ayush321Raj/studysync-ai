@@ -1,25 +1,25 @@
 import axios from "axios";
-import env from "../config/env.js";
 
-const axiosInstance = axios.create({
-  baseURL: env.API_URL,
-  withCredentials: true, // Send cookies (for refresh tokens)
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
+  withCredentials: true, // Send cookies (refresh tokens)
   timeout: 10000,
 });
 
 // Request interceptor (we'll add JWT in Phase 2)
-axiosInstance.interceptors.request.use(
+api.interceptors.request.use(
   (config) => config,
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
-axiosInstance.interceptors.response.use(
-  (response) => response,
+// Response interceptor (centralized error handling)
+api.interceptors.response.use(
+  (response) => response.data,
   (error) => {
-    // We'll handle token refresh here in Phase 2
-    return Promise.reject(error);
+    const message =
+      error.response?.data?.message || error.message || "Something went wrong";
+    return Promise.reject({ ...error, message });
   }
 );
 
-export default axiosInstance;
+export default api;

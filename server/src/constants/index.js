@@ -1,4 +1,4 @@
-export const DB_NAME = "studysync";
+export const DB_NAME = "studysync-ai";
 
 export const HTTP_STATUS = {
   OK: 200,

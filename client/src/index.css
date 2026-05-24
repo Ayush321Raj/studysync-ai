@@ -1,29 +1,26 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap");
-
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  * {
+    @apply border-border;
   }
-
   body {
-    @apply bg-background text-white font-sans antialiased;
+    @apply bg-background text-muted-foreground font-sans antialiased;
   }
+  html {
+  color-scheme: dark;
+}
+}
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
+@layer utilities {
+  .glass {
+    @apply bg-surface/60 backdrop-blur-xl border border-border;
   }
-  ::-webkit-scrollbar-track {
-    @apply bg-background;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted;
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
   }
 }

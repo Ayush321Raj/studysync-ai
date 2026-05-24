@@ -1,8 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: "class",
-  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
+  darkMode: ["class"],
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
+    container: {
+      center: true,
+      padding: "1rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
         background: "#0A0A0F",
@@ -10,13 +17,19 @@ export default {
         border: "#1F1F2A",
         primary: {
           DEFAULT: "#7C5CFF",
-          hover: "#6B4CE6",
+          foreground: "#FFFFFF",
         },
-        accent: "#00D9FF",
+        accent: {
+          DEFAULT: "#00D9FF",
+          foreground: "#0A0A0F",
+        },
+        muted: {
+          DEFAULT: "#A1A1AA",
+          foreground: "#F4F4F5",
+        },
         success: "#22C55E",
         warning: "#F59E0B",
         error: "#EF4444",
-        muted: "#A1A1AA",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -28,12 +41,12 @@ export default {
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
+          "0%": { opacity: 0 },
+          "100%": { opacity: 1 },
         },
         slideUp: {
-          "0%": { transform: "translateY(20px)", opacity: "0" },
-          "100%": { transform: "translateY(0)", opacity: "1" },
+          "0%": { opacity: 0, transform: "translateY(20px)" },
+          "100%": { opacity: 1, transform: "translateY(0)" },
         },
       },
     },

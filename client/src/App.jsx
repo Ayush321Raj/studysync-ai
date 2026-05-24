@@ -1,57 +1,93 @@
 import { useEffect, useState } from "react";
-import axiosInstance from "./lib/axios";
+import { motion } from "framer-motion";
+import { Activity, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { healthService } from "./services/health.service";
 
 function App() {
-  const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("loading");
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    axiosInstance
-      .get("/health")
-      .then((res) => setHealth(res.data))
-      .catch((err) => setHealth({ success: false, message: err.message }))
-      .finally(() => setLoading(false));
+    healthService
+      .check()
+      .then((res) => {
+        setData(res.data);
+        setStatus("success");
+      })
+      .catch(() => setStatus("error"));
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-surface border border-border rounded-2xl p-8 shadow-2xl animate-slide-up">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="glass rounded-2xl p-8 max-w-md w-full shadow-2xl"
+      >
+        {/* Brand Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center font-bold text-white">
-            S
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+            <Activity className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">StudySync AI</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-white">StudySync AI</h1>
+            <p className="text-xs text-muted">Foundation Health Check</p>
+          </div>
         </div>
 
-        <p className="text-muted mb-6 text-sm">
-          Production-grade foundation • Phase 1 complete
-        </p>
+        {/* Status Card */}
+        <div className="bg-background/50 rounded-xl p-6 border border-border">
+          {status === "loading" && (
+            <div className="flex items-center gap-3 text-muted">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Connecting to backend...</span>
+            </div>
+          )}
 
-        <div className="border border-border rounded-xl p-4 bg-background/50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Backend Health</span>
-            {loading ? (
-              <span className="text-xs text-muted">Checking...</span>
-            ) : health?.success ? (
-              <span className="text-xs text-success flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                Connected
-              </span>
-            ) : (
-              <span className="text-xs text-error">Disconnected</span>
-            )}
-          </div>
-          {health && (
-            <p className="text-xs text-muted mt-2 break-all">
-              {health.message}
-            </p>
+          {status === "success" && data && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-3"
+            >
+              <div className="flex items-center gap-2 text-success">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-medium">All systems operational</span>
+              </div>
+              <div className="space-y-2 text-sm">
+                <Row label="Service" value={data.service} />
+                <Row label="Status" value={data.status} />
+                <Row label="Environment" value={data.environment} />
+                <Row
+                  label="Uptime"
+                  value={`${data.uptime.toFixed(2)}s`}
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {status === "error" && (
+            <div className="flex items-center gap-3 text-error">
+              <XCircle className="w-5 h-5" />
+              <span>Backend unreachable. Is the server running?</span>
+            </div>
           )}
         </div>
 
-        <div className="mt-6 text-xs text-muted text-center">
-          🚀 Ready for Phase 2: Authentication
-        </div>
-      </div>
+        <p className="text-xs text-muted/60 text-center mt-6">
+          Phase 1 · Foundation Setup Complete
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-muted">{label}</span>
+      <span className="text-white font-mono text-xs">{value}</span>
     </div>
   );
 }
