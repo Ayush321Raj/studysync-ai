@@ -15,7 +15,7 @@ export const register = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
 
   // Create user via service
-  const user = await authService.register({
+  const {user, accessToken, refreshToken} = await authService.register({
     fullName,
     email,
     username,
@@ -23,9 +23,9 @@ export const register = asyncHandler(async (req, res) => {
   });
 
   // Generate tokens
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
+  // const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+  //   user._id
+  // );
 
   // Send response
   return res
@@ -49,12 +49,12 @@ export const login = asyncHandler(async (req, res) => {
   const { identifier, password } = req.body;
 
   // Authenticate user
-  const user = await authService.login({ identifier, password });
+  const {user, accessToken, refreshToken} = await authService.login({ identifier, password });
 
   // Generate tokens
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
+  // const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+  //   user._id
+  // );
 
   // Send response
   return res
@@ -94,6 +94,8 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
   // Verify and get user
   const user = await authService.verifyRefreshToken(incomingRefreshToken);
+  // const { user, accessToken, refreshToken } =
+  // await authService.refreshAccessToken(incomingRefreshToken);
 
   // Generate new tokens (rotation)
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(

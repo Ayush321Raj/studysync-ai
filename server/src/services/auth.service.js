@@ -1,136 +1,166 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { HTTP_STATUS } from "../constants/index.js";
 import { generateAccessAndRefreshTokens } from "../utils/generateTokens.js";
 
 class AuthService {
   /**
    * Register a new user
    */
-  async register({ fullName, email, username, password }) {
-  // Check if user already exists
-  const existingUser = await User.findOne({
-    $or: [{ email }, { username }],
-  });
+  async register(userData) {
+    const { fullName, email, username, password } = userData;
 
-  if (existingUser) {
-    if (existingUser.email === email) {
-      throw new ApiError(409, "Email already registered");
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        throw new ApiError(409, "Email already registered");
+      }
+      if (existingUser.username === username) {
+        throw new ApiError(409, "Username already taken");
+      }
     }
 
-    throw new ApiError(409, "Username already taken");
+    // Create user
+    const user = await User.create({
+      fullName,
+      email,
+      username,
+      password, // Will be hashed by pre-save hook
+    });
+
+    // Generate tokens
+    const { accessToken, refreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    // Return user without sensitive data
+    const createdUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+
+    return { user: createdUser, accessToken, refreshToken };
   }
-
-  // Create user
-  const user = await User.create({
-    fullName,
-    email,
-    username,
-    password,
-  });
-
-  // Generate tokens
-  const { accessToken, refreshToken } =
-    await generateAccessAndRefreshTokens(user._id);
-
-  // Fetch clean user
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-
-  return {
-    user: createdUser,
-    accessToken,
-    refreshToken,
-  };
-}
 
   /**
    * Login user
    */
-  async login({ identifier, password }) {
-  const user = await User.findOne({
-    $or: [{ email: identifier }, { username: identifier }],
-  }).select("+password +refreshToken");
-
-  if (!user) {
-    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid credentials");
-  }
-
-  const isPasswordValid = await user.isPasswordCorrect(password);
-
-  if (!isPasswordValid) {
-    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid credentials");
-  }
-
-  // Generate new tokens
-  const accessToken = user.generateAccessToken();
-  const refreshToken = user.generateRefreshToken();
-
-  // Save refresh token
-  user.refreshToken = refreshToken;
-  await user.save({ validateBeforeSave: false });
-  
-
-  // Remove sensitive fields
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-
-  return {
-    user: loggedInUser,
-    accessToken,
-    refreshToken,
-  };
-}
-
-  /**
-   * Verify refresh token and return user
-   */
-  async verifyRefreshToken(incomingRefreshToken) {
-    if (!incomingRefreshToken) {
-      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Refresh token required");
-    }
-
-    // Verify token
-    let decoded;
-    try {
-      decoded = jwt.verify(
-        incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
-      );
-    } catch (error) {
-      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid or expired refresh token");
-    }
-
-    // Find user and check if token matches
-    const user = await User.findById(decoded._id).select("+refreshToken");
+  async login({identifier, password}) {
+    // Find user by email or username
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    }).select("+password +isActive");
 
     if (!user) {
-      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid refresh token");
+      throw new ApiError(401, "Invalid credentials");
     }
 
-    // Check if refresh token matches (rotation security)
-    if (user.refreshToken !== incomingRefreshToken) {
-      throw new ApiError(
-        HTTP_STATUS.UNAUTHORIZED,
-        "Refresh token has been used or revoked"
-      );
+    // Check if account is active
+    if (!user.isActive) {
+      throw new ApiError(403, "Account has been deactivated");
     }
 
-    return user;
+    // Verify password
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid credentials");
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    // Generate tokens
+    const { accessToken, refreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    // Return user without sensitive data
+    const loggedInUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+
+    return { user: loggedInUser, accessToken, refreshToken };
   }
 
   /**
-   * Logout user (clear refresh token)
+   * Logout user
    */
   async logout(userId) {
     await User.findByIdAndUpdate(
       userId,
-      { $unset: { refreshToken: 1 } }, // Remove field
+      {
+        $unset: { refreshToken: 1 }, // Remove refresh token
+      },
       { new: true }
     );
+
+    return true;
+  }
+
+  /**
+   * Refresh access token
+   */
+  async refreshAccessToken(incomingRefreshToken) {
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, "Unauthorized - Refresh token required");
+    }
+
+    try {
+      // Verify refresh token
+      const decoded = jwt.verify(
+        incomingRefreshToken,
+        process.env.REFRESH_TOKEN_SECRET
+      );
+
+      // Find user
+      const user = await User.findById(decoded._id).select("+refreshToken");
+
+      if (!user) {
+        throw new ApiError(401, "Invalid refresh token");
+      }
+
+      // Check if refresh token matches
+      if (user.refreshToken !== incomingRefreshToken) {
+        throw new ApiError(401, "Refresh token is expired or used");
+      }
+
+      // Generate new tokens
+      const { accessToken, refreshToken } =
+        await generateAccessAndRefreshTokens(user._id);
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      throw new ApiError(401, "Invalid or expired refresh token");
+    }
+  }
+
+  async verifyRefreshToken(incomingRefreshToken) {
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, "Refresh token required");
+    }
+
+    try {
+      const decoded = jwt.verify(
+        incomingRefreshToken,
+        process.env.REFRESH_TOKEN_SECRET
+      );
+
+      const user = await User.findById(decoded._id).select("+refreshToken");
+
+      if (!user) {
+        throw new ApiError(401, "Invalid refresh token");
+      }
+
+      if (user.refreshToken !== incomingRefreshToken) {
+        throw new ApiError(401, "Refresh token expired or already used");
+      }
+
+      return user;
+    } catch (error) {
+      throw new ApiError(401, "Invalid or expired refresh token");
+    }
   }
 }
 

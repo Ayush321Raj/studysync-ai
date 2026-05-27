@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import mongoSanitize from "express-mongo-sanitize";
 import xss from "xss-clean";
+import userRoutes from "./routes/user.routes.js";
 
 import { ApiError } from "./utils/ApiError.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -90,9 +91,11 @@ app.use("/api/v1/auth/register", authLimiter);
 
 import healthRouter from "./routes/health.routes.js";
 import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 app.use("/api/v1/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/users", userRouter);
 
 /* ---------------------------------------
    404 + ERROR HANDLER

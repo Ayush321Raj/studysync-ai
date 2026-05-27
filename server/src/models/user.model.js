@@ -17,6 +17,7 @@ const userSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email"],
       index: true,
     },
     username: {
@@ -25,6 +26,9 @@ const userSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      minlength: [3, "Username must be at least 3 characters"],
+      maxlength: [20, "Username cannot exceed 20 characters"],
+      match: [/^[a-z0-9_]+$/, "Username can only contain lowercase letters, numbers, and underscores"],
       index: true,
     },
     password: {
@@ -35,6 +39,11 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
+      default: "",
+    },
+    bio: {
+      type: String,
+      maxlength: [200, "Bio cannot exceed 200 characters"],
       default: "",
     },
     role: {
@@ -58,6 +67,31 @@ const userSchema = new Schema(
       type: String,
       enum: ["local", "google"],
       default: "local",
+    },
+    socialLinks: {
+      github: { type: String, default: "" },
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
+      website: { type: String, default: "" },
+    },
+    preferences: {
+      theme: {
+        type: String,
+        enum: ["light", "dark", "system"],
+        default: "dark",
+      },
+      emailNotifications: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      select: false, // Soft delete flag
+    },
+    lastLogin: {
+      type: Date,
     },
   },
   { timestamps: true }
