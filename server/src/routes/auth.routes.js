@@ -12,16 +12,22 @@ import {
   registerSchema,
   loginSchema,
 } from "../validators/auth.validator.js";
+import { trackActivity } from "../middlewares/activityTracker.middleware.js";
 
 const router = Router();
 
 // Public routes
-router.post("/register", validate(registerSchema), register);
-router.post("/login", validate(loginSchema), login);
-router.post("/refresh-token", refreshAccessToken);
+router.route("/register").post(validate(registerSchema), register);
+// router.post("/login", validate(loginSchema), login);
+router.route("/login").post(
+  validate(loginSchema),
+  login,
+  trackActivity("login") // <--- Add this
+);
+router.route("/refresh-token").post(refreshAccessToken);
 
 // Protected routes
-router.post("/logout", verifyJWT, logout);
-router.get("/me", verifyJWT, getCurrentUser);
+router.route("/logout").post(verifyJWT, logout, trackActivity("logout")); 
+router.route("/me").get(verifyJWT, getCurrentUser);
 
 export default router;

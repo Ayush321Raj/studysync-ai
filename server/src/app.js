@@ -15,6 +15,8 @@ import { ApiError } from "./utils/ApiError.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { HTTP_STATUS } from "./constants/index.js";
 
+// import studySessionRouter from "./routes/studySession.routes.js";
+
 const app = express();
 
 /* ---------------------------------------
@@ -88,14 +90,17 @@ app.use("/api/v1/auth/register", authLimiter);
 /* ---------------------------------------
    ROUTES
 --------------------------------------- */
-
 import healthRouter from "./routes/health.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
+import dashboardRouter from "./routes/dashboard.routes.js";
+import studySessionRouter from "./routes/studySession.routes.js"; // <-- Add this
 
 app.use("/api/v1/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/dashboard", dashboardRouter);
+app.use("/api/v1/study-sessions", studySessionRouter); // <-- Add this
 
 /* ---------------------------------------
    404 + ERROR HANDLER
@@ -109,6 +114,8 @@ app.use((req, res, next) => {
   );
   next(error);
 });
+
+// app.use("/api/v1/study-sessions", studySessionRouter);
 
 // Data sanitization against NoSQL injection
 app.use(mongoSanitize());
